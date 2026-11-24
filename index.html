@@ -70,15 +70,14 @@ Solidairement,`;
       }
     }
 
-    window.addEventListener("DOMContentLoaded", async () => {
+        window.addEventListener("DOMContentLoaded", async () => {
       if (lireMemoire("aDejaVoteMarinvest") === "true") {
         desactiverBouton();
       }
 
       try {
-        const res = await fetch(`${URL_PONT_GOOGLE}?action=get_count`, { redirect: "follow" });
-        const texte = await res.text();
-        const data = JSON.parse(texte);
+        const res = await fetch(`${URL_PONT_GOOGLE}?action=get_count&t=${Date.now()}`);
+        const data = await res.json();
         if (data.count !== undefined) {
           document.getElementById("nb-courriels").innerText = data.count;
         }
@@ -92,9 +91,8 @@ Solidairement,`;
       btn.disabled = true;
 
       try {
-        const res = await fetch(`${URL_PONT_GOOGLE}?action=up`, { redirect: "follow" });
-        const texte = await res.text();
-        const data = JSON.parse(texte);
+        const res = await fetch(`${URL_PONT_GOOGLE}?action=up&t=${Date.now()}`);
+        const data = await res.json();
         if (data.count !== undefined) {
           document.getElementById("nb-courriels").innerText = data.count;
           ecrireMemoire("aDejaVoteMarinvest", "true");
@@ -107,6 +105,7 @@ Solidairement,`;
         btn.innerText = "J'ai envoyé un beau courriel ✓";
       }
     }
+
 
     async function chercherElus() {
       const cp = document.getElementById('cp').value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
