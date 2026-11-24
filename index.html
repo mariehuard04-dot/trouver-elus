@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 5px 0; color: #222; text-align: center; }
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 5px 10px; color: #222; text-align: center; }
     .box { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
     input { padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; text-transform: uppercase; width: 150px; }
     button { padding: 10px 18px; font-size: 16px; background: #111; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
     button:hover { background: #333; }
     .elu { background: #f4f4f4; padding: 10px 15px; border-radius: 5px; margin-bottom: 8px; text-align: left; }
-    .btn-envoi { display: inline-block; margin-top: 12px; padding: 12px 20px; background: #0066cc; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; }
+    .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+    .btn-envoi { display: inline-block; padding: 11px 16px; background: #111; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; }
+    .btn-copier { padding: 11px 16px; background: #e5e5e5; color: #111; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; font-size: 14px; cursor: pointer; }
+    .btn-copier:hover { background: #d5d5d5; }
   </style>
 </head>
 <body>
@@ -22,8 +25,18 @@
   <div id="resultat"></div>
 
   <script>
-    const SUJET = encodeURIComponent("Préoccupation concernant le projet de GNL Marinvest");
-    const MESSAGE = encodeURIComponent(`Bonjour à vous,\n\nSi je vous écris aujourd'hui, c'est pour vous faire part de ma préoccupation devant l'intention du gouvernement Carney de ramener un projet de gaz naturel liquéfié au Québec. Marinvest est une compagnie norvégienne qui souhaite construire une usine flottante sur le fleuve Saint-Laurent à Baie-Comeau, connectée à un pipeline de 1000 km afin d'exporter du gaz en Europe avec le soutien tacite du gouvernement. En plus de nous éloigner des objectifs de réduction de gaz à effet de serre au pays, ce projet menace des milieux naturels déjà fragiles.\n\nMalgré ces inquiétants développements, une mobilisation citoyenne considérable a permis en 2021 d'arrêter le projet de GNL Québec au Saguenay et se relance actuellement pour protéger la biodiversité et le paysage québécois. Pouvons-nous compter sur votre appui?\n\nSolidairement,`);
+    const SUJET_TEXTE = "Préoccupation concernant le projet de GNL Marinvest";
+    const MESSAGE_TEXTE = `Bonjour à vous,
+
+Si je vous écris aujourd'hui, c'est pour vous faire part de ma préoccupation devant l'intention du gouvernement Carney de ramener un projet de gaz naturel liquéfié au Québec. Marinvest est une compagnie norvégienne qui souhaite construire une usine flottante sur le fleuve Saint-Laurent à Baie-Comeau, connectée à un pipeline de 1000 km afin d'exporter du gaz en Europe avec le soutien tacite du gouvernement. En plus de nous éloigner des objectifs de réduction de gaz à effet de serre au pays, ce projet menace des milieux naturels déjà fragiles.
+
+Malgré ces inquiétants développements, une mobilisation citoyenne considérable a permis en 2021 d'arrêter le projet de GNL Québec au Saguenay et se relance actuellement pour protéger la biodiversité et le paysage québécois. Pouvons-nous compter sur votre appui?
+
+Solidairement,`;
+
+    const SUJET = encodeURIComponent(SUJET_TEXTE);
+    const MESSAGE = encodeURIComponent(MESSAGE_TEXTE);
+    let listeCourriels = [];
 
     async function chercherElus() {
       const cp = document.getElementById('cp').value.replace(/\s+/g, '').toUpperCase();
@@ -35,24 +48,23 @@
       resDiv.innerHTML = "<p>Recherche en cours...</p>";
 
       try {
-        const rep = await fetch(`https://represent.opennorth.ca/postcodes/${cp}/`);
+        const rep = await fetch(`https://opennorth.ca{cp}/`);
         if (!rep.ok) throw new Error();
         const data = await rep.json();
         const liste = [...(data.representatives_centroid || []), ...(data.representatives_concordance || [])];
 
         let html = "";
-        let courriels = [];
+        listeCourriels = [];
         const vus = new Set();
 
         liste.forEach(elu => {
           const titre = elu.elected_office || "";
-          // Garder uniquement Maire/Mairesse, Député provincial (MNA) et Député fédéral (MP)
           if (["Mayor", "Maire", "Mairesse", "MNA", "MP"].includes(titre) && !vus.has(elu.name)) {
             vus.add(elu.name);
             let role = titre === "MP" ? "Député·e fédéral·e" : (titre === "MNA" ? "Député·e provincial·e" : "Maire / Mairesse");
             html += `<div class="elu"><strong>${role} :</strong> ${elu.name} (${elu.district_name})<br>`;
             if (elu.email) {
-              courriels.push(elu.email);
+              listeCourriels.push(elu.email);
               html += `<a href="mailto:${elu.email}?subject=${SUJET}&body=${MESSAGE}">${elu.email}</a></div>`;
             } else {
               html += `<em>Courriel non disponible</em></div>`;
@@ -60,13 +72,34 @@
           }
         });
 
-        if (courriels.length > 0) {
-          html += `<a class="btn-envoi" href="mailto:${courriels.join(',')}?subject=${SUJET}&body=${MESSAGE}">✉️ Écrire aux ${courriels.length} élu·e·s en un clic</a>`;
+        if (listeCourriels.length > 0) {
+          html += `<div class="actions">
+            <a class="btn-envoi" href="mailto:${listeCourriels.join(',')}?subject=${SUJET}&body=${MESSAGE}">✉️ Écrire aux ${listeCourriels.length} élu·e·s</a>
+            <button type="button" class="btn-copier" id="btnCopier" onclick="copierAdresses()">📋 Copier les adresses</button>
+            <button type="button" class="btn-copier" id="btnTexte" onclick="copierTexte()">📄 Copier la lettre</button>
+          </div>`;
         }
         resDiv.innerHTML = html || "<p>Aucun élu trouvé pour ce code postal.</p>";
       } catch (e) {
         resDiv.innerHTML = "<p>Code postal introuvable ou erreur de connexion.</p>";
       }
+    }
+
+    function copierAdresses() {
+      navigator.clipboard.writeText(listeCourriels.join(', ')).then(() => {
+        const btn = document.getElementById('btnCopier');
+        btn.innerText = "✓ Adresses copiées !";
+        setTimeout(() => { btn.innerText = "📋 Copier les adresses"; }, 2500);
+      });
+    }
+
+    function copierTexte() {
+      const complet = `Objet : ${SUJET_TEXTE}\n\n${MESSAGE_TEXTE}`;
+      navigator.clipboard.writeText(complet).then(() => {
+        const btn = document.getElementById('btnTexte');
+        btn.innerText = "✓ Lettre copiée !";
+        setTimeout(() => { btn.innerText = "📄 Copier la lettre"; }, 2500);
+      });
     }
   </script>
 </body>
