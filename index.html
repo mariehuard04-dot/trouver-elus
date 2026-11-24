@@ -70,40 +70,72 @@ Solidairement,`;
       }
     }
 
-        window.addEventListener("DOMContentLoaded", async () => {
+            function appelerCompteurGoogle(action, onSucces, onErreur) {
+      const nomCallback = "cb_compteur_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+      const script = document.createElement("script");
+      let termine = false;
+
+      const timer = setTimeout(() => {
+        if (!termine) {
+          termine = true;
+          delete window[nomCallback];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          if (onErreur) onErreur();
+        }
+      }, 8000);
+
+      window[nomCallback] = function(data) {
+        if (!termine) {
+          termine = true;
+          clearTimeout(timer);
+          delete window[nomCallback];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          if (onSucces) onSucces(data);
+        }
+      };
+
+      script.onerror = function() {
+        if (!termine) {
+          termine = true;
+          clearTimeout(timer);
+          delete window[nomCallback];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          if (onErreur) onErreur();
+        }
+      };
+
+      script.src = `${URL_PONT_GOOGLE}?action=${action}&callback=${nomCallback}&t=${Date.now()}`;
+      document.body.appendChild(script);
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
       if (lireMemoire("aDejaVoteMarinvest") === "true") {
         desactiverBouton();
       }
 
-      try {
-        const res = await fetch(`${URL_PONT_GOOGLE}?action=get_count&t=${Date.now()}`);
-        const data = await res.json();
-        if (data.count !== undefined) {
+      appelerCompteurGoogle("get_count", (data) => {
+        if (data && data.count !== undefined) {
           document.getElementById("nb-courriels").innerText = data.count;
         }
-      } catch (e) {}
+      });
     });
 
-    async function ajouterCourriel() {
+    function ajouterCourriel() {
       if (aVoteSession || lireMemoire("aDejaVoteMarinvest") === "true") return;
       const btn = document.getElementById("btnConfirmer");
       btn.innerText = "Enregistrement...";
       btn.disabled = true;
 
-      try {
-        const res = await fetch(`${URL_PONT_GOOGLE}?action=up&t=${Date.now()}`);
-        const data = await res.json();
-        if (data.count !== undefined) {
+      appelerCompteurGoogle("up", (data) => {
+        if (data && data.count !== undefined) {
           document.getElementById("nb-courriels").innerText = data.count;
           ecrireMemoire("aDejaVoteMarinvest", "true");
           desactiverBouton();
-        } else {
-          throw new Error("Réponse invalide");
         }
-      } catch (e) {
+      }, () => {
         btn.disabled = false;
         btn.innerText = "J'ai envoyé un beau courriel ✓";
-      }
+      });
     }
 
 
