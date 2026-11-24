@@ -52,35 +52,42 @@ Solidairement,`;
     const MESSAGE = encodeURIComponent(MESSAGE_TEXTE);
     let listeCourriels = [];
 
-    const API_COMPTEUR = "https://counterapi.dev";
+    const API_COMPTEUR = "https://script.google.com/macros/s/AKfycbxfRHGa8iH-Dv1tGRZ_VIhGix9hkxE1hZLTu9mm8ubHWqntUtyZ-4BICX0rLzpEU94/exec";
 
     window.addEventListener("DOMContentLoaded", () => {
-      fetch(API_COMPTEUR)
-        .then(res => res.json())
-        .then(data => { document.getElementById("nb-courriels").innerText = data.count || 0; })
-        .catch(() => { document.getElementById("nb-courriels").innerText = "0"; });
+  if (localStorage.getItem("aDejaVoteMarinvest")) {
+    desactiverBouton();
+  }
 
-      if (localStorage.getItem("aDejaVoteMarinvest")) desactiverBouton();
+  fetch(`${API_COMPTEUR}?action=get_count`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("nb-courriels").innerText = data.count || 0;
+    })
+    .catch(() => {
+      document.getElementById("nb-courriels").innerText = "0";
     });
+});
 
     function ajouterCourriel() {
-      if (localStorage.getItem("aDejaVoteMarinvest")) return;
-      const btn = document.getElementById("btnConfirmer");
-      btn.innerText = "Enregistrement...";
-      btn.disabled = true;
+  if (localStorage.getItem("aDejaVoteMarinvest")) return;
+  const btn = document.getElementById("btnConfirmer");
+  btn.innerText = "Enregistrement...";
+  btn.disabled = true;
 
-      fetch(`${API_COMPTEUR}/up`)
-        .then(res => res.json())
-        .then(data => {
-          document.getElementById("nb-courriels").innerText = data.count;
-          localStorage.setItem("aDejaVoteMarinvest", "true");
-          desactiverBouton();
-        })
-        .catch(() => {
-          btn.disabled = false;
-          btn.innerText = "J'ai envoyé un beau courriel ✓";
-        });
-    }
+  fetch(`${API_COMPTEUR}?action=up`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("nb-courriels").innerText = data.count;
+      localStorage.setItem("aDejaVoteMarinvest", "true");
+      desactiverBouton();
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerText = "J'ai envoyé un beau courriel ✓";
+    });
+}
+
 
     function desactiverBouton() {
       const btn = document.getElementById("btnConfirmer");
