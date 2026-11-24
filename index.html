@@ -147,8 +147,33 @@ Solidairement,`;
       }
     }
 
+       function copierDansPressePapier(texte, callbackSucces) {
+      var zoneTemp = document.createElement("textarea");
+      zoneTemp.value = texte;
+      zoneTemp.setAttribute("readonly", "");
+      zoneTemp.style.position = "fixed";
+      zoneTemp.style.left = "-9999px";
+      document.body.appendChild(zoneTemp);
+      zoneTemp.select();
+      zoneTemp.setSelectionRange(0, 99999);
+
+      var reussi = false;
+      try {
+        reussi = document.execCommand("copy");
+      } catch (e) {
+        reussi = false;
+      }
+      document.body.removeChild(zoneTemp);
+
+      if (reussi) {
+        callbackSucces();
+      } else if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(texte).then(callbackSucces);
+      }
+    }
+
     function copierAdresses() {
-      navigator.clipboard.writeText(listeCourriels.join(', ')).then(() => {
+      copierDansPressePapier(listeCourriels.join(', '), function() {
         const btn = document.getElementById('btnCopier');
         btn.innerText = "✓ Adresses copiées !";
         setTimeout(() => { btn.innerText = "📋 Copier les adresses"; }, 2500);
@@ -157,7 +182,7 @@ Solidairement,`;
 
     function copierTexte() {
       const complet = `Objet : ${SUJET_TEXTE}\n\n${MESSAGE_TEXTE}`;
-      navigator.clipboard.writeText(complet).then(() => {
+      copierDansPressePapier(complet, function() {
         const btn = document.getElementById('btnTexte');
         btn.innerText = "✓ Lettre copiée !";
         setTimeout(() => { btn.innerText = "📄 Copier la lettre"; }, 2500);
