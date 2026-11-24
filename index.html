@@ -37,6 +37,8 @@
   </div>
 
   <script>
+    const URL_PONT_GOOGLE = "https://script.google.com/macros/s/AKfycbwx8Hg6zQ0itzBtbn8StKdjAtEPI3uz4lpU58tcntsWW65FgI7lchs_Dsm7HjByGUzdUQ/exec";
+
     const SUJET_TEXTE = "Préoccupation concernant le projet de GNL Marinvest";
     const MESSAGE_TEXTE = `Bonjour à vous,
 
@@ -58,9 +60,7 @@ Solidairement,`;
         .then(data => { document.getElementById("nb-courriels").innerText = data.count || 0; })
         .catch(() => { document.getElementById("nb-courriels").innerText = "0"; });
 
-      if (localStorage.getItem("aDejaVoteMarinvest")) {
-        desactiverBouton();
-      }
+      if (localStorage.getItem("aDejaVoteMarinvest")) desactiverBouton();
     });
 
     function ajouterCourriel() {
@@ -88,33 +88,6 @@ Solidairement,`;
       btn.innerText = "Merci pour votre envoi ! ✓";
     }
 
-    async function recupererDonneesOpenNorth(cp) {
-      const urlCible = `https://opennorth.ca{cp}/`;
-      
-      // 1. Essai direct
-      try {
-        const rep = await fetch(urlCible);
-        if (rep.ok) return await rep.json();
-        if (rep.status === 404) return { notFound: true };
-      } catch (e) {}
-
-      // 2. Essai via AllOrigins (relais ouvert)
-      try {
-        const rep2 = await fetch(`https://allorigins.win{encodeURIComponent(urlCible)}`);
-        if (rep2.ok) {
-          const wrapper = await rep2.json();
-          if (wrapper.status && wrapper.status.http_code === 404) return { notFound: true };
-          if (wrapper.contents) return JSON.parse(wrapper.contents);
-        }
-      } catch (e) {}
-
-      // 3. Essai via CodeTabs (second relais ouvert)
-      const rep3 = await fetch(`https://codetabs.com{encodeURIComponent(urlCible)}`);
-      if (rep3.status === 404) return { notFound: true };
-      if (!rep3.ok) throw new Error("Indisponible");
-      return await rep3.json();
-    }
-
     async function chercherElus() {
       const cp = document.getElementById('cp').value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       const resDiv = document.getElementById('resultat');
@@ -125,15 +98,15 @@ Solidairement,`;
       resDiv.innerHTML = "<p>Recherche en cours...</p>";
 
       try {
-        const data = await recupererDonneesOpenNorth(cp);
-        
-        if (data.notFound) {
-          resDiv.innerHTML = "<p>Ce code postal n'a pas été trouvé dans la base de données.</p>";
+        const rep = await fetch(`${URL_PONT_GOOGLE}?cp=${cp}`);
+        const data = await rep.json();
+
+        if (data.error || (!data.representatives_centroid && !data.representatives_concordance)) {
+          resDiv.innerHTML = "<p>Ce code postal n'a pas été trouvé.</p>";
           return;
         }
 
         const liste = [...(data.representatives_centroid || []), ...(data.representatives_concordance || [])];
-
         let html = "";
         listeCourriels = [];
         const vus = new Set();
@@ -192,4 +165,5 @@ Solidairement,`;
   </script>
 </body>
 </html>
+
 
