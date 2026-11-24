@@ -90,13 +90,29 @@ Solidairement,`;
 
     async function recupererDonneesOpenNorth(cp) {
       const urlCible = `https://opennorth.ca{cp}/`;
-      try {
-        const repDirecte = await fetch(urlCible);
-        if (repDirecte.ok || repDirecte.status === 404) return repDirecte;
-      } catch (e) {}
       
-      // Relais automatique si le navigateur bloque la requête directe
-      return await fetch(`https://corsproxy.io{encodeURIComponent(urlCible)}`);
+      // 1. Essai direct
+      try {
+        const rep = await fetch(urlCible);
+        if (rep.ok) return await rep.json();
+        if (rep.status === 404) return { notFound: true };
+      } catch (e) {}
+
+      // 2. Essai via AllOrigins (relais ouvert)
+      try {
+        const rep2 = await fetch(`https://allorigins.win{encodeURIComponent(urlCible)}`);
+        if (rep2.ok) {
+          const wrapper = await rep2.json();
+          if (wrapper.status && wrapper.status.http_code === 404) return { notFound: true };
+          if (wrapper.contents) return JSON.parse(wrapper.contents);
+        }
+      } catch (e) {}
+
+      // 3. Essai via CodeTabs (second relais ouvert)
+      const rep3 = await fetch(`https://codetabs.com{encodeURIComponent(urlCible)}`);
+      if (rep3.status === 404) return { notFound: true };
+      if (!rep3.ok) throw new Error("Indisponible");
+      return await rep3.json();
     }
 
     async function chercherElus() {
@@ -109,15 +125,13 @@ Solidairement,`;
       resDiv.innerHTML = "<p>Recherche en cours...</p>";
 
       try {
-        const rep = await recupererDonneesOpenNorth(cp);
+        const data = await recupererDonneesOpenNorth(cp);
         
-        if (rep.status === 404) {
+        if (data.notFound) {
           resDiv.innerHTML = "<p>Ce code postal n'a pas été trouvé dans la base de données.</p>";
           return;
         }
-        if (!rep.ok) throw new Error("Serveur occupé");
 
-        const data = await rep.json();
         const liste = [...(data.representatives_centroid || []), ...(data.representatives_concordance || [])];
 
         let html = "";
