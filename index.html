@@ -14,6 +14,12 @@
     .btn-envoi { display: inline-block; padding: 11px 16px; background: #111; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; }
     .btn-copier { padding: 11px 16px; background: #e5e5e5; color: #111; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .btn-copier:hover { background: #d5d5d5; }
+    
+    /* Style du compteur en bas */
+    .compteur-section { margin-top: 25px; padding-top: 18px; border-top: 1px solid #eee; }
+    .compteur-texte { font-size: 16px; margin-bottom: 10px; font-weight: bold; }
+    .btn-confirmer { padding: 12px 22px; font-size: 15px; font-weight: bold; background: #111; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-confirmer:disabled { background: #2e7d32; cursor: default; }
   </style>
 </head>
 <body>
@@ -22,7 +28,14 @@
     <input type="text" id="cp" placeholder="Ex: G1A 1A3" maxlength="7">
     <button onclick="chercherElus()">Trouver mes élu·e·s</button>
   </div>
+  
   <div id="resultat"></div>
+
+  <!-- Section Compteur -->
+  <div class="compteur-section">
+    <div class="compteur-texte">Courriels envoyés : <span id="nb-courriels">...</span></div>
+    <button type="button" class="btn-confirmer" id="btnConfirmer" onclick="ajouterCourriel()">J'ai envoyé un beau courriel ✓</button>
+  </div>
 
   <script>
     const SUJET_TEXTE = "Préoccupation concernant le projet de GNL Marinvest";
@@ -37,6 +50,51 @@ Solidairement,`;
     const SUJET = encodeURIComponent(SUJET_TEXTE);
     const MESSAGE = encodeURIComponent(MESSAGE_TEXTE);
     let listeCourriels = [];
+
+    // API gratuite pour le compteur partagé
+    const API_COMPTEUR = "https://counterapi.dev";
+
+    // Charger le nombre actuel dès l'ouverture de la page
+    window.addEventListener("DOMContentLoaded", () => {
+      fetch(API_COMPTEUR)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("nb-courriels").innerText = data.count || 0;
+        })
+        .catch(() => {
+          document.getElementById("nb-courriels").innerText = "0";
+        });
+
+      if (localStorage.getItem("aDejaVoteMarinvest")) {
+        desactiverBouton();
+      }
+    });
+
+    function ajouterCourriel() {
+      if (localStorage.getItem("aDejaVoteMarinvest")) return;
+      
+      const btn = document.getElementById("btnConfirmer");
+      btn.innerText = "Enregistrement...";
+      btn.disabled = true;
+
+      fetch(`${API_COMPTEUR}/up`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("nb-courriels").innerText = data.count;
+          localStorage.setItem("aDejaVoteMarinvest", "true");
+          desactiverBouton();
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.innerText = "J'ai envoyé un beau courriel ✓";
+        });
+    }
+
+    function desactiverBouton() {
+      const btn = document.getElementById("btnConfirmer");
+      btn.disabled = true;
+      btn.innerText = "Merci pour votre envoi ! ✓";
+    }
 
     async function chercherElus() {
       const cp = document.getElementById('cp').value.replace(/\s+/g, '').toUpperCase();
