@@ -37,7 +37,7 @@
   </div>
 
   <script>
-    const URL_PONT_GOOGLE = "https://script.google.com/macros/s/AKfycbwx8Hg6zQ0itzBtbn8StKdjAtEPI3uz4lpU58tcntsWW65FgI7lchs_Dsm7HjByGUzdUQ/exec";
+    const URL_PONT_GOOGLE = "https://script.google.com/macros/s/AKfycbxfRHGa8iH-Dv1tGRZ_VIhGix9hkxE1hZLTu9mm8ubHWqntUtyZ-4BICX0rLzpEU94/exec";
 
     const SUJET_TEXTE = "Préoccupation concernant le projet de GNL Marinvest";
     const MESSAGE_TEXTE = `Bonjour à vous,
@@ -98,11 +98,12 @@ Solidairement,`;
       resDiv.innerHTML = "<p>Recherche en cours...</p>";
 
       try {
-        const rep = await fetch(`${URL_PONT_GOOGLE}?cp=${cp}`);
-        const data = await rep.json();
+        const rep = await fetch(`${URL_PONT_GOOGLE}?cp=${cp}`, { redirect: "follow" });
+        const texteBrut = await rep.text();
+        const data = JSON.parse(texteBrut);
 
         if (data.error || (!data.representatives_centroid && !data.representatives_concordance)) {
-          resDiv.innerHTML = "<p>Ce code postal n'a pas été trouvé.</p>";
+          resDiv.innerHTML = `<p>Code postal non trouvé (${data.error || 'aucun résultat'}).</p>`;
           return;
         }
 
@@ -165,5 +166,6 @@ Solidairement,`;
   </script>
 </body>
 </html>
+
 
 
