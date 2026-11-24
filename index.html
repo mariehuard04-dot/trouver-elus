@@ -14,8 +14,7 @@
     .btn-envoi { display: inline-block; padding: 11px 16px; background: #111; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 14px; }
     .btn-copier { padding: 11px 16px; background: #e5e5e5; color: #111; border: 1px solid #ccc; border-radius: 5px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .btn-copier:hover { background: #d5d5d5; }
-    
-    /* Style du compteur en bas */
+    .erreur-box { background: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 5px; font-size: 14px; text-align: left; }
     .compteur-section { margin-top: 25px; padding-top: 18px; border-top: 1px solid #eee; }
     .compteur-texte { font-size: 16px; margin-bottom: 10px; font-weight: bold; }
     .btn-confirmer { padding: 12px 22px; font-size: 15px; font-weight: bold; background: #111; color: #fff; border: none; border-radius: 5px; cursor: pointer; }
@@ -26,12 +25,11 @@
 
   <div class="box">
     <input type="text" id="cp" placeholder="Ex: G1A 1A3" maxlength="7">
-    <button onclick="chercherElus()">Trouver mes élu·e·s</button>
+    <button type="button" onclick="chercherElus()">Trouver mes élu·e·s</button>
   </div>
   
   <div id="resultat"></div>
 
-  <!-- Section Compteur -->
   <div class="compteur-section">
     <div class="compteur-texte">Courriels envoyés : <span id="nb-courriels">...</span></div>
     <button type="button" class="btn-confirmer" id="btnConfirmer" onclick="ajouterCourriel()">J'ai envoyé un beau courriel ✓</button>
@@ -51,19 +49,13 @@ Solidairement,`;
     const MESSAGE = encodeURIComponent(MESSAGE_TEXTE);
     let listeCourriels = [];
 
-    // API gratuite pour le compteur partagé
     const API_COMPTEUR = "https://counterapi.dev";
 
-    // Charger le nombre actuel dès l'ouverture de la page
     window.addEventListener("DOMContentLoaded", () => {
       fetch(API_COMPTEUR)
         .then(res => res.json())
-        .then(data => {
-          document.getElementById("nb-courriels").innerText = data.count || 0;
-        })
-        .catch(() => {
-          document.getElementById("nb-courriels").innerText = "0";
-        });
+        .then(data => { document.getElementById("nb-courriels").innerText = data.count || 0; })
+        .catch(() => { document.getElementById("nb-courriels").innerText = "0"; });
 
       if (localStorage.getItem("aDejaVoteMarinvest")) {
         desactiverBouton();
@@ -72,7 +64,6 @@ Solidairement,`;
 
     function ajouterCourriel() {
       if (localStorage.getItem("aDejaVoteMarinvest")) return;
-      
       const btn = document.getElementById("btnConfirmer");
       btn.innerText = "Enregistrement...";
       btn.disabled = true;
@@ -97,17 +88,25 @@ Solidairement,`;
     }
 
     async function chercherElus() {
-      const cp = document.getElementById('cp').value.replace(/\s+/g, '').toUpperCase();
+      const cp = document.getElementById('cp').value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
       const resDiv = document.getElementById('resultat');
       if (cp.length !== 6) {
-        resDiv.innerHTML = "<p>Veuillez entrer un code postal valide (6 caractères).</p>";
+        resDiv.innerHTML = "<p>Veuillez entrer un code postal valide (ex. G1A 1A3).</p>";
         return;
       }
       resDiv.innerHTML = "<p>Recherche en cours...</p>";
 
       try {
-        const rep = await fetch(`https://opennorth.ca{cp}/`);
-        if (!rep.ok) throw new Error();
+        const rep = await fetch(`https://opennorth.ca{cp}/`, {
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (rep.status === 404) {
+          resDiv.innerHTML = "<p>Ce code postal n'a pas été trouvé dans la base de données.</p>";
+          return;
+        }
+        if (!rep.ok) throw new Error("Serveur occupé");
+
         const data = await rep.json();
         const liste = [...(data.representatives_centroid || []), ...(data.representatives_concordance || [])];
 
@@ -139,7 +138,14 @@ Solidairement,`;
         }
         resDiv.innerHTML = html || "<p>Aucun élu trouvé pour ce code postal.</p>";
       } catch (e) {
-        resDiv.innerHTML = "<p>Code postal introuvable ou erreur de connexion.</p>";
+        resDiv.innerHTML = `<div class="erreur-box">
+          <strong>Le service de recherche automatique est temporairement indisponible.</strong><br>
+          Vous pouvez trouver vos élus directement ici :<br>
+          • <a href="https://noscommunes.ca" target="_blank">Député·e fédéral·e</a><br>
+          • <a href="https://assnat.qc.ca" target="_blank">Député·e provincial·e</a><br>
+          • <a href="https://gouv.qc.ca" target="_blank">Maire / Mairesse</a>
+          <div class="actions"><button type="button" class="btn-copier" id="btnTexte" onclick="copierTexte()">📄 Copier la lettre</button></div>
+        </div>`;
       }
     }
 
@@ -161,4 +167,6 @@ Solidairement,`;
     }
   </script>
 </body>
+</html>
+
 </html>
