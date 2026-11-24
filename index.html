@@ -32,12 +32,12 @@
   <div id="resultat"></div>
 
   <div class="compteur-section">
-    <div class="compteur-texte">Courriels envoyés : <span id="nb-courriels">...</span></div>
+    <div class="compteur-texte">Courriels envoyés : <span id="nb-courriels">0</span></div>
     <button type="button" class="btn-confirmer" id="btnConfirmer" onclick="ajouterCourriel()">J'ai envoyé un beau courriel ✓</button>
   </div>
 
   <script>
-    const URL_PONT_GOOGLE = "https://script.google.com/macros/s/AKfycbxfRHGa8iH-Dv1tGRZ_VIhGix9hkxE1hZLTu9mm8ubHWqntUtyZ-4BICX0rLzpEU94/exec";
+    const URL_PONT_GOOGLE = "https://google.com";
 
     const SUJET_TEXTE = "Préoccupation concernant le projet de GNL Marinvest";
     const MESSAGE_TEXTE = `Bonjour à vous,
@@ -51,48 +51,61 @@ Solidairement,`;
     const SUJET = encodeURIComponent(SUJET_TEXTE);
     const MESSAGE = encodeURIComponent(MESSAGE_TEXTE);
     let listeCourriels = [];
+    let aVoteSession = false;
 
-    const API_COMPTEUR = "https://script.google.com/macros/s/AKfycbxfRHGa8iH-Dv1tGRZ_VIhGix9hkxE1hZLTu9mm8ubHWqntUtyZ-4BICX0rLzpEU94/exec";
+    function lireMemoire(cle) {
+      try { return localStorage.getItem(cle); } catch (e) { return null; }
+    }
 
-    window.addEventListener("DOMContentLoaded", () => {
-  if (localStorage.getItem("aDejaVoteMarinvest")) {
-    desactiverBouton();
-  }
-
-  fetch(`${API_COMPTEUR}?action=get_count`)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("nb-courriels").innerText = data.count || 0;
-    })
-    .catch(() => {
-      document.getElementById("nb-courriels").innerText = "0";
-    });
-});
-
-    function ajouterCourriel() {
-  if (localStorage.getItem("aDejaVoteMarinvest")) return;
-  const btn = document.getElementById("btnConfirmer");
-  btn.innerText = "Enregistrement...";
-  btn.disabled = true;
-
-  fetch(`${API_COMPTEUR}?action=up`)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("nb-courriels").innerText = data.count;
-      localStorage.setItem("aDejaVoteMarinvest", "true");
-      desactiverBouton();
-    })
-    .catch(() => {
-      btn.disabled = false;
-      btn.innerText = "J'ai envoyé un beau courriel ✓";
-    });
-}
-
+    function ecrireMemoire(cle, valeur) {
+      try { localStorage.setItem(cle, valeur); } catch (e) {}
+    }
 
     function desactiverBouton() {
+      aVoteSession = true;
       const btn = document.getElementById("btnConfirmer");
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Merci pour votre envoi ! ✓";
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      if (lireMemoire("aDejaVoteMarinvest") === "true") {
+        desactiverBouton();
+      }
+
+      try {
+        const res = await fetch(`${URL_PONT_GOOGLE}?action=get_count`, { redirect: "follow" });
+        const texte = await res.text();
+        const data = JSON.parse(texte);
+        if (data.count !== undefined) {
+          document.getElementById("nb-courriels").innerText = data.count;
+        }
+      } catch (e) {}
+    });
+
+    async function ajouterCourriel() {
+      if (aVoteSession || lireMemoire("aDejaVoteMarinvest") === "true") return;
+      const btn = document.getElementById("btnConfirmer");
+      btn.innerText = "Enregistrement...";
       btn.disabled = true;
-      btn.innerText = "Merci pour votre envoi ! ✓";
+
+      try {
+        const res = await fetch(`${URL_PONT_GOOGLE}?action=up`, { redirect: "follow" });
+        const texte = await res.text();
+        const data = JSON.parse(texte);
+        if (data.count !== undefined) {
+          document.getElementById("nb-courriels").innerText = data.count;
+          ecrireMemoire("aDejaVoteMarinvest", "true");
+          desactiverBouton();
+        } else {
+          throw new Error("Réponse invalide");
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.innerText = "J'ai envoyé un beau courriel ✓";
+      }
     }
 
     async function chercherElus() {
@@ -154,7 +167,7 @@ Solidairement,`;
       }
     }
 
-       function copierDansPressePapier(texte, callbackSucces) {
+    function copierDansPressePapier(texte, callbackSucces) {
       var zoneTemp = document.createElement("textarea");
       zoneTemp.value = texte;
       zoneTemp.setAttribute("readonly", "");
